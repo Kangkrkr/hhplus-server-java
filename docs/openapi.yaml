@@ -1,0 +1,282 @@
+# API Specification (OpenAPI 3.1)
+
+openapi: 3.1.0
+info:
+  title: E-Commerce Service API
+  version: "1.0.0"
+  description: 포인트 기반 상품 주문을 위한 e-커머스 서비스 API 명세서
+servers:
+  - url: http://localhost:8080/api/v1
+    description: 로컬 개발 서버
+
+# 1. Paths (엔드포인트 정의)
+paths:
+  /products:
+    get:
+      tags: [Product]
+      summary: 상품 목록 조회
+      description: 시스템에 등록된 모든 상품 목록을 조회합니다.
+      responses:
+        '200':
+          description: 상품 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /products/popular:
+    get:
+      tags: [Product]
+      summary: 인기 상품 조회
+      description: 지정된 기간 동안 가장 많이 판매된 상위 N개 상품 목록을 조회합니다.
+      parameters:
+        - name: days
+          in: query
+          description: 조회 기간(일)
+          schema:
+            type: integer
+            default: 7
+        - name: limit
+          in: query
+          description: 조회할 상품 개수
+          schema:
+            type: integer
+            default: 5
+      responses:
+        '200':
+          description: 인기 상품 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /points/me:
+    get:
+      tags: [Point]
+      summary: 내 포인트 잔액 조회
+      description: 현재 사용자의 포인트 잔액을 조회합니다.
+      security:
+        - UserIdAuth: []
+      responses:
+        '200':
+          description: 포인트 잔액 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PointBalance'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /points/charge:
+    post:
+      tags: [Point]
+      summary: 포인트 충전
+      description: 사용자의 포인트를 충전합니다.
+      security:
+        - UserIdAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PointChargeRequest'
+      responses:
+        '200':
+          description: 포인트 충전 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PointBalance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /orders:
+    post:
+      tags: [Order]
+      summary: 주문 및 결제
+      description: 상품을 주문하고 사용자의 포인트로 결제합니다.
+      security:
+        - UserIdAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+      responses:
+        '201':
+          description: 주문 및 결제 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /coupons/{couponId}/issue:
+    post:
+      tags: [Coupon]
+      summary: 선착순 쿠폰 발급
+      description: 사용자에게 선착순으로 쿠폰을 발급합니다.
+      security:
+        - UserIdAuth: []
+      parameters:
+        - name: couponId
+          in: path
+          required: true
+          description: 발급받을 쿠폰의 ID
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 쿠폰 발급 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponIssueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 쿠폰이 모두 소진되었거나 이미 발급받은 경우
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "C002"
+                message: "쿠폰이 모두 소진되었습니다."
+
+# 2. Components (재사용 가능한 요소 정의)
+components:
+  # 2.1. Schemas (데이터 모델)
+  schemas:
+    Product:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        price: { type: integer }
+        stock: { type: integer }
+    PointBalance:
+      type: object
+      properties:
+        userId: { type: integer, format: int64 }
+        points: { type: number }
+    PointChargeRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          description: 충전할 금액
+          example: 10000
+    OrderRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: integer, format: int64 }
+              quantity: { type: integer }
+    OrderResponse:
+      type: object
+      properties:
+        orderId: { type: integer, format: int64 }
+        status: { type: string, example: "ORDERED" }
+        totalPrice: { type: number }
+    CouponIssueResponse:
+      type: object
+      properties:
+        userId: { type: integer, format: int64 }
+        couponId: { type: integer, format: int64 }
+        issuedAt: { type: string, format: "date-time" }
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  # 2.2. Responses (공통 응답)
+  responses:
+    BadRequest:
+      description: 잘못된 요청 (파라미터 오류, 비즈니스 로직 오류 등)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            INSUFFICIENT_STOCK:
+              value:
+                code: "O001"
+                message: "재고가 부족한 상품이 있습니다."
+            INSUFFICIENT_POINTS:
+              value:
+                code: "O002"
+                message: "포인트 잔액이 부족합니다."
+    Unauthorized:
+      description: 인증 실패 (API 키 또는 토큰 누락/오류)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "A001"
+            message: "인증 헤더(X-USER-ID)가 유효하지 않습니다."
+    NotFound:
+      description: 요청한 리소스를 찾을 수 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "A002"
+            message: "해당 사용자를 찾을 수 없습니다."
+    InternalServerError:
+      description: 서버 내부 오류
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "E001"
+            message: "알 수 없는 서버 오류가 발생했습니다."
+
+  # 2.3. Security Schemes (인증 방식)
+  securitySchemes:
+    UserIdAuth:
+      type: apiKey
+      in: header
+      name: X-USER-ID
+      description: 개발 초기 단계의 사용자 식별을 위한 ID. 프로덕션 환경에서는 JWT 등으로 대체되어야 합니다.
+
+# 3. Tags (API 그룹)
+tags:
+  - name: Product
+    description: 상품 관련 API
+  - name: Point
+    description: 사용자 포인트 관련 API
+  - name: Order
+    description: 주문 및 결제 관련 API
+  - name: Coupon
+    description: 쿠폰 및 프로모션 관련 API
