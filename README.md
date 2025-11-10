@@ -1,6 +1,7 @@
 # E-Commerce Service
 
 본 문서는 e-커머스 상품 주문 서비스의 요구사항, 아키텍처, 주요 설계 결정 사항을 기술하는 최상위 문서입니다.
+(참고 링크 : https://github.com/elyo9381/hhplus-backend-study/blob/feature/server-java/server-java/README.md)
 
 ## 1. 개요 (Overview)
 
@@ -20,7 +21,7 @@
 
 본 프로젝트의 상세 설계 내용은 아래 문서에서 확인할 수 있습니다.
 
-- **[API 명세서](./docs/api-specs.md)**: API 엔드포인트, 요청/응답 형식, 인증 및 에러 코드를 정의합니다.
+- **[API 명세서](./docs/api-specs.yaml)**: API 엔드포인트, 요청/응답 형식, 인증 및 에러 코드를 정의합니다.
 - **[ERD (데이터 모델)](./docs/erd.md)**: 데이터베이스 엔티티와 관계, 제약 조건 등을 기술합니다.
 - **[인프라 아키텍처](./docs/infrastructure.md)**: 시스템을 구성하는 인프라 요소와 그 역할, 선택 이유를 설명합니다.
 - **[시퀀스 다이어그램](./docs/sequence-diagrams.md)**: 주요 기능의 처리 흐름을 시각적으로 표현합니다.
